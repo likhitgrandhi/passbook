@@ -1,61 +1,41 @@
-//
-//  ContentView.swift
-//  passbook
-//
-//  Created by Likhit Grandhi on 23/03/26.
-//
-
 import SwiftUI
 import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    @State private var granularity: Granularity = .day
+
+    private var overviewLabel: String {
+        switch granularity {
+        case .day:   return "Today"
+        case .week:  return "Week"
+        case .month: return "Month"
+        }
+    }
+
+    private var overviewIcon: String {
+        switch granularity {
+        case .day:   return "sun.max.fill"
+        case .week:  return "calendar.badge.clock"
+        case .month: return "moon.fill"
+        }
+    }
 
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
+        TabView {
+            Tab(overviewLabel, systemImage: overviewIcon) {
+                SquaresDayHomeView(granularity: $granularity)
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-        } detail: {
-            Text("Select an item")
-        }
-    }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+            Tab("Budget", systemImage: "chart.pie") {
+                BudgetView()
             }
         }
+        .sensoryFeedback(.selection, trigger: granularity)
     }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
+        .environment(TransactionStore())
+        .modelContainer(SharedModelContainer.shared)
 }

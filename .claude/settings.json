@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx skills:*)",
+      "Read(//Users/apple/personalfinance/expense-manager/**)",
+      "Bash(grep -n \"foregroundColor\\\\|cornerRadius\\\\|GeometryReader\\\\|ObservableObject\\\\|@Published\\\\|EnvironmentObject\\\\|animation\\(_:\\\\|Date\\(\\)\\\\|CGFloat\\\\|String\\(format:\" /Users/apple/Documents/passbook/passbook/Screens/DayHome/*.swift /Users/apple/Documents/passbook/passbook/Logic/*.swift)",
+      "Bash(grep -n !. /Users/apple/Documents/passbook/passbook/Logic/*.swift /Users/apple/Documents/passbook/passbook/Screens/DayHome/*.swift)",
+      "Bash(find /Users/apple/Documents/passbook -name *.plist -o -name *.pbxproj)",
+      "Bash(xcodebuild -scheme passbook -destination 'generic/platform=iOS Simulator' -configuration Debug build)",
+      "Bash(plutil -lint /Users/apple/Documents/passbook/passbook/Info.plist)",
+      "Read(//Users/apple/Library/Developer/Xcode/DerivedData/passbook-caxidanrqmggoohhiahqwvysnotr/Build/Products/Debug-iphonesimulator/passbook.app/**)",
+      "Bash(plutil -convert xml1 -o - \"/Users/apple/Library/Developer/Xcode/DerivedData/passbook-caxidanrqmggoohhiahqwvysnotr/Build/Products/Debug-iphonesimulator/passbook.app/Info.plist\")",
+      "Bash(plutil -convert xml1 -o - /Users/apple/Library/Developer/Xcode/DerivedData/passbook-caxidanrqmggoohhiahqwvysnotr/Build/Products/Debug-iphonesimulator/passbook.app/Info.plist)",
+      "WebFetch(domain:support.apple.com)",
+      "WebFetch(domain:dev.to)",
+      "WebFetch(domain:matthewcassinelli.com)",
+      "Bash(plutil -convert xml1 -o - /tmp/LogBankTransaction.shortcut)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "WebFetch(domain:heroui.com)"
+    ]
+  }
+}

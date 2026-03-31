@@ -6,7 +6,20 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		184301D92F786BDE005F6E8C /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 184301D82F786BDE005F6E8C /* WidgetKit.framework */; };
+		184301DB2F786BDE005F6E8C /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 184301DA2F786BDE005F6E8C /* SwiftUI.framework */; };
+		184301EA2F786BE0005F6E8C /* PassbookWidgetExtensionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 184301D62F786BDE005F6E8C /* PassbookWidgetExtensionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
+		184301E82F786BE0005F6E8C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 18905B022F713AB9004095AE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 184301D52F786BDE005F6E8C;
+			remoteInfo = PassbookWidgetExtensionExtension;
+		};
 		18905B1A2F713ABA004095AE /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 18905B022F713AB9004095AE /* Project object */;
@@ -23,15 +36,60 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		184301EF2F786BE0005F6E8C /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				184301EA2F786BE0005F6E8C /* PassbookWidgetExtensionExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		184301D62F786BDE005F6E8C /* PassbookWidgetExtensionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PassbookWidgetExtensionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		184301D82F786BDE005F6E8C /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		184301DA2F786BDE005F6E8C /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		18905B0A2F713AB9004095AE /* passbook.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = passbook.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		18905B192F713ABA004095AE /* passbookTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = passbookTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		18905B232F713ABA004095AE /* passbookUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = passbookUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		184301EE2F786BE0005F6E8C /* Exceptions for "PassbookWidgetExtension" folder in "PassbookWidgetExtensionExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 184301D52F786BDE005F6E8C /* PassbookWidgetExtensionExtension */;
+		};
+		A1B2C3D4E5F600001234ABCD /* Exceptions for "passbook" folder in "passbook" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 18905B092F713AB9004095AE /* passbook */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		184301DC2F786BDE005F6E8C /* PassbookWidgetExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				184301EE2F786BE0005F6E8C /* Exceptions for "PassbookWidgetExtension" folder in "PassbookWidgetExtensionExtension" target */,
+			);
+			path = PassbookWidgetExtension;
+			sourceTree = "<group>";
+		};
 		18905B0C2F713AB9004095AE /* passbook */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A1B2C3D4E5F600001234ABCD /* Exceptions for "passbook" folder in "passbook" target */,
+			);
 			path = passbook;
 			sourceTree = "<group>";
 		};
@@ -48,6 +106,15 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		184301D32F786BDE005F6E8C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				184301DB2F786BDE005F6E8C /* SwiftUI.framework in Frameworks */,
+				184301D92F786BDE005F6E8C /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		18905B072F713AB9004095AE /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -72,12 +139,23 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		184301D72F786BDE005F6E8C /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				184301D82F786BDE005F6E8C /* WidgetKit.framework */,
+				184301DA2F786BDE005F6E8C /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		18905B012F713AB9004095AE = {
 			isa = PBXGroup;
 			children = (
 				18905B0C2F713AB9004095AE /* passbook */,
 				18905B1C2F713ABA004095AE /* passbookTests */,
 				18905B262F713ABA004095AE /* passbookUITests */,
+				184301DC2F786BDE005F6E8C /* PassbookWidgetExtension */,
+				184301D72F786BDE005F6E8C /* Frameworks */,
 				18905B0B2F713AB9004095AE /* Products */,
 			);
 			sourceTree = "<group>";
@@ -88,6 +166,7 @@
 				18905B0A2F713AB9004095AE /* passbook.app */,
 				18905B192F713ABA004095AE /* passbookTests.xctest */,
 				18905B232F713ABA004095AE /* passbookUITests.xctest */,
+				184301D62F786BDE005F6E8C /* PassbookWidgetExtensionExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -95,6 +174,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		184301D52F786BDE005F6E8C /* PassbookWidgetExtensionExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 184301EB2F786BE0005F6E8C /* Build configuration list for PBXNativeTarget "PassbookWidgetExtensionExtension" */;
+			buildPhases = (
+				184301D22F786BDE005F6E8C /* Sources */,
+				184301D32F786BDE005F6E8C /* Frameworks */,
+				184301D42F786BDE005F6E8C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				184301DC2F786BDE005F6E8C /* PassbookWidgetExtension */,
+			);
+			name = PassbookWidgetExtensionExtension;
+			packageProductDependencies = (
+			);
+			productName = PassbookWidgetExtensionExtension;
+			productReference = 184301D62F786BDE005F6E8C /* PassbookWidgetExtensionExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		18905B092F713AB9004095AE /* passbook */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 18905B2D2F713ABA004095AE /* Build configuration list for PBXNativeTarget "passbook" */;
@@ -102,10 +203,12 @@
 				18905B062F713AB9004095AE /* Sources */,
 				18905B072F713AB9004095AE /* Frameworks */,
 				18905B082F713AB9004095AE /* Resources */,
+				184301EF2F786BE0005F6E8C /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				184301E92F786BE0005F6E8C /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				18905B0C2F713AB9004095AE /* passbook */,
@@ -173,6 +276,9 @@
 				LastSwiftUpdateCheck = 2610;
 				LastUpgradeCheck = 2610;
 				TargetAttributes = {
+					184301D52F786BDE005F6E8C = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
 					18905B092F713AB9004095AE = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
@@ -203,11 +309,19 @@
 				18905B092F713AB9004095AE /* passbook */,
 				18905B182F713ABA004095AE /* passbookTests */,
 				18905B222F713ABA004095AE /* passbookUITests */,
+				184301D52F786BDE005F6E8C /* PassbookWidgetExtensionExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		184301D42F786BDE005F6E8C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		18905B082F713AB9004095AE /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -232,6 +346,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		184301D22F786BDE005F6E8C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		18905B062F713AB9004095AE /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -256,6 +377,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		184301E92F786BE0005F6E8C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 184301D52F786BDE005F6E8C /* PassbookWidgetExtensionExtension */;
+			targetProxy = 184301E82F786BE0005F6E8C /* PBXContainerItemProxy */;
+		};
 		18905B1B2F713ABA004095AE /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 18905B092F713AB9004095AE /* passbook */;
@@ -269,6 +395,66 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		184301EC2F786BE0005F6E8C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 35AMDQP39Q;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PassbookWidgetExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PassbookWidgetExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = justtinytools.passbook.PassbookWidgetExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		184301ED2F786BE0005F6E8C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 35AMDQP39Q;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PassbookWidgetExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PassbookWidgetExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = justtinytools.passbook.PassbookWidgetExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		18905B2B2F713ABA004095AE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -395,16 +581,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 35AMDQP39Q;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = passbook/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -412,6 +595,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = justtinytools.passbook;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -427,16 +611,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 35AMDQP39Q;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = passbook/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -444,6 +625,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = justtinytools.passbook;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -541,6 +723,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		184301EB2F786BE0005F6E8C /* Build configuration list for PBXNativeTarget "PassbookWidgetExtensionExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				184301EC2F786BE0005F6E8C /* Debug */,
+				184301ED2F786BE0005F6E8C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		18905B052F713AB9004095AE /* Build configuration list for PBXProject "passbook" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
