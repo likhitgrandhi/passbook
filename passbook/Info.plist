@@ -37,7 +37,10 @@
 	<key>UIAppFonts</key>
 	<array>
 		<string>IBMPlexSans_Condensed-SemiBold.ttf</string>
-		<string>PlusJakartaSans-VariableFont_wght.ttf</string>
+		<string>PlusJakartaSans-Regular.ttf</string>
+		<string>PlusJakartaSans-Medium.ttf</string>
+		<string>PlusJakartaSans-SemiBold.ttf</string>
+		<string>PlusJakartaSans-Bold.ttf</string>
 		<string>Sora-SemiBold.ttf</string>
 	</array>
 	<key>NSSupportsLiveActivities</key>

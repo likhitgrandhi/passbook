@@ -17,75 +17,73 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppColors.settingsBg.ignoresSafeArea()
+                Color(.systemGroupedBackground).ignoresSafeArea()
 
                 VStack(spacing: 0) {
                     // MARK: - Header
                     SettingsHeader(onDismiss: { dismiss() })
 
                     ScrollView {
-                        // MARK: - White card
                         VStack(spacing: 0) {
-                            // Highlighted row — Setup
-                            SettingsHighlightRow(
-                                icon: "questionmark.circle",
-                                title: "How to Setup",
-                                subtitle: "Connect bank SMS for automatic tracking"
-                            ) {
-                                showingSetup = true
+                            // MARK: - Main section (Setup / Budget / Categories)
+                            SettingsSectionCard {
+                                SettingsMenuRow(
+                                    icon: "questionmark.circle",
+                                    title: "How to Setup",
+                                    action: { showingSetup = true }
+                                )
+
+                                SettingsDivider()
+
+                                SettingsMenuRow(
+                                    icon: "chart.bar",
+                                    title: "Budget",
+                                    trailingValue: "₹\(Int(store.dailyBudget)) / day",
+                                    action: { showingBudget = true }
+                                )
+
+                                SettingsDivider()
+
+                                SettingsMenuRow(
+                                    icon: "square.grid.2x2",
+                                    title: "Categories",
+                                    action: { showingCategories = true }
+                                )
                             }
                             .padding(.horizontal, 16)
-                            .padding(.top, 16)
-                            .padding(.bottom, 12)
+                            .padding(.top, 8)
 
-                            // Regular rows
-                            SettingsMenuRow(
-                                icon: "chart.bar",
-                                title: "Budget",
-                                subtitle: "Daily limit · ₹\(Int(store.dailyBudget)) / day"
-                            ) {
-                                showingBudget = true
+                            // MARK: - App section
+                            SettingsSectionLabel(text: "APP")
+
+                            SettingsSectionCard {
+                                SettingsMenuRow(
+                                    icon: "dot.radiowaves.left.and.right",
+                                    title: "Live Activities",
+                                    action: {
+                                        Task { await fireTestLiveActivity(dailyBudget: store.dailyBudget) }
+                                    }
+                                )
                             }
+                            .padding(.horizontal, 16)
 
-                            SettingsDivider()
+                            // MARK: - Data section
+                            SettingsSectionLabel(text: "DATA")
 
-                            SettingsMenuRow(
-                                icon: "square.grid.2x2",
-                                title: "Categories",
-                                subtitle: "Manage spending categories"
-                            ) {
-                                showingCategories = true
+                            SettingsSectionCard {
+                                SettingsMenuRow(
+                                    icon: "square.and.arrow.up",
+                                    title: "Export Data",
+                                    action: { exportTransactionsCSV() }
+                                )
                             }
-
-                            SettingsDivider()
-
-                            SettingsMenuRow(
-                                icon: "dot.radiowaves.left.and.right",
-                                title: "Live Activities",
-                                subtitle: "Dynamic Island notifications"
-                            ) {
-                                Task { await fireTestLiveActivity(dailyBudget: store.dailyBudget) }
-                            }
-
-                            SettingsDivider()
-
-                            SettingsMenuRow(
-                                icon: "square.and.arrow.up",
-                                title: "Export Data",
-                                subtitle: "Download transactions as CSV"
-                            ) {
-                                exportTransactionsCSV()
-                            }
+                            .padding(.horizontal, 16)
                         }
-                        .background(.white)
-                        .clipShape(.rect(cornerRadius: 20))
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
 
                         // MARK: - Footer
                         Text("All data stored locally · No accounts required")
                             .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .foregroundStyle(AppColors.charcoal.opacity(0.3))
+                            .foregroundStyle(.tertiary)
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: .infinity)
                             .padding(.top, 28)
@@ -154,64 +152,55 @@ private struct SettingsHeader: View {
 
     var body: some View {
         ZStack {
-            Text("SETTINGS")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundStyle(AppColors.charcoal)
-                .tracking(1.0)
+            Text("Settings")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.primary)
 
             HStack {
-                Button("Back", systemImage: "arrow.left", action: onDismiss)
-                    .labelStyle(.iconOnly)
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(AppColors.charcoal)
                 Spacer()
+                Button("Close", systemImage: "xmark", action: onDismiss)
+                    .labelStyle(.iconOnly)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 30, height: 30)
+                    .background(Color(.tertiarySystemFill))
+                    .clipShape(Circle())
             }
         }
         .padding(.horizontal, 20)
-        .padding(.top, 28)
+        .padding(.top, 20)
         .padding(.bottom, 16)
     }
 }
 
-// MARK: - Highlighted row (setup CTA)
+// MARK: - Section card container
 
-private struct SettingsHighlightRow: View {
-    let icon: String
-    let title: String
-    let subtitle: String
-    let action: () -> Void
+private struct SettingsSectionCard<Content: View>: View {
+    @ViewBuilder let content: Content
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 14) {
-                Image(systemName: icon)
-                    .font(.system(size: 22, weight: .medium))
-                    .foregroundStyle(AppColors.charcoal.opacity(0.8))
-                    .frame(width: 36)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundStyle(AppColors.charcoal)
-                    Text(subtitle)
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(AppColors.charcoal.opacity(0.5))
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(AppColors.charcoal.opacity(0.3))
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(AppColors.homeBlue.opacity(0.25))
-            )
+        VStack(spacing: 0) {
+            content
         }
-        .buttonStyle(.plain)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(.rect(cornerRadius: 16, style: .continuous))
+    }
+}
+
+// MARK: - Section label
+
+private struct SettingsSectionLabel: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 12, weight: .semibold, design: .rounded))
+            .foregroundStyle(.secondary)
+            .tracking(0.5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 36)
+            .padding(.top, 20)
+            .padding(.bottom, 6)
     }
 }
 
@@ -220,34 +209,35 @@ private struct SettingsHighlightRow: View {
 private struct SettingsMenuRow: View {
     let icon: String
     let title: String
-    let subtitle: String
+    var trailingValue: String? = nil
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 14) {
                 Image(systemName: icon)
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(AppColors.charcoal.opacity(0.7))
+                    .font(.system(size: 19, weight: .medium))
+                    .foregroundStyle(.secondary)
                     .frame(width: 36)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundStyle(AppColors.charcoal)
-                    Text(subtitle)
-                        .font(.system(size: 13, weight: .regular, design: .rounded))
-                        .foregroundStyle(AppColors.charcoal.opacity(0.45))
-                }
+                Text(title)
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundStyle(.primary)
 
                 Spacer()
 
+                if let value = trailingValue {
+                    Text(value)
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundStyle(.secondary)
+                }
+
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(AppColors.charcoal.opacity(0.2))
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.quaternary)
             }
             .padding(.horizontal, 20)
-            .padding(.vertical, 18)
+            .padding(.vertical, 16)
         }
         .buttonStyle(.plain)
     }

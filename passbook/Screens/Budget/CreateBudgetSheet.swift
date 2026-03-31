@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - Focus fields enum
 
-private enum BudgetField { case income, liabilities, budget }
+enum BudgetField { case income, liabilities, budget }
 
 // MARK: - Create Budget Sheet
 
@@ -189,7 +189,7 @@ struct CreateBudgetSheet: View {
 // MARK: - Plain amount display (income row — no card background)
 // Owns its own @State text. Parent only updates when parsed Double changes.
 
-private struct BudgetAmountDisplay: View {
+struct BudgetAmountDisplay: View {
     let label: String
     let initialValue: Double
     var isFocused: FocusState<BudgetField?>.Binding
@@ -303,7 +303,7 @@ private struct BudgetAmountInputCard: View {
 
 // MARK: - Calculated row (disposable income — read-only)
 
-private struct BudgetCalculatedRow: View {
+struct BudgetCalculatedRow: View {
     let label: String
     let value: Double
     let isActive: Bool
@@ -325,7 +325,7 @@ private struct BudgetCalculatedRow: View {
 
 // MARK: - Operator separator
 
-private struct BudgetSeparator: View {
+struct BudgetSeparator: View {
     let symbol: String
 
     var body: some View {
@@ -339,7 +339,7 @@ private struct BudgetSeparator: View {
 
 // MARK: - Savings display (no animations — instant update prevents keystroke lag)
 
-private struct BudgetSavingsDisplay: View {
+struct BudgetSavingsDisplay: View {
     let savings: Double
     let yearlySavings: Double
     let canCompute: Bool
