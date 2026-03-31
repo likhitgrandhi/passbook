@@ -81,13 +81,12 @@ struct BudgetView: View {
         .onChange(of: selectedMonth) { recompute() }
         .onChange(of: allTransactions) { recompute() }
         // Sheets — also at this level so they work from both layouts
-        .sheet(isPresented: $showingCreateSheet) {
-            CreateBudgetSheet(month: selectedMonth) { income, liabilities, spendBudget in
+        .fullScreenCover(isPresented: $showingCreateSheet) {
+            CreateBudgetWizard(month: selectedMonth) { income, liabilities, spendBudget in
                 modelContext.insert(MonthlyBudget(month: selectedMonth, income: income,
                                                   fixedLiabilities: liabilities, spendBudget: spendBudget))
                 recompute()
             }
-            .presentationDetents([.large]).presentationDragIndicator(.hidden).presentationCornerRadius(24)
         }
         .sheet(isPresented: $showingEditSheet) {
             if let b = budget {
