@@ -2,19 +2,27 @@ import SwiftUI
 import SwiftData
 import Charts
 
-// ── Card position constants — identical to home page ────────────────────────
-private let kBudgetPeekFraction: CGFloat   = 0.56
-private let kBudgetExpandFraction: CGFloat = 0.22
-
 // ── Computed data models ─────────────────────────────────────────────────────
 
 struct CategorySpendItem: Identifiable {
-    let id: String      // category name
+    let id: String
     let name: String
     let amount: Double
     let fraction: Double  // of total spend (0–1)
     let emoji: String
     let color: Color
+}
+
+struct BudgetInsight {
+    let icon: String   // SF Symbol
+    let title: String
+    let body: String
+}
+
+struct WeekSpend: Identifiable {
+    let id: Int        // 1–4
+    let label: String  // "Wk 1"
+    let amount: Double
 }
 
 // MARK: - Budget View
@@ -29,58 +37,127 @@ struct BudgetView: View {
     @State private var showingEditSheet       = false
     @State private var confirmDelete          = false
 
-    // ── Card drag state — identical to home page ─────────────────────────────
-    @State private var cardFraction: CGFloat   = kBudgetPeekFraction
-    @State private var dragOffset: CGFloat     = 0
-    @State private var listScrollOffset: CGFloat = 0
-    @State private var isScrollEnabled         = false
-
-    // ── All derived state — only recomputed when inputs change ───────────────
+    // ── Derived state — only recomputed when inputs change ───────────────────
     @State private var cachedChartData: [DailySpendPoint]        = []
     @State private var cachedTotalSpent: Double                  = 0
     @State private var cachedCategorySpends: [CategorySpendItem] = []
     @State private var cachedAverageDaily: Double                = 0
     @State private var cachedDaysElapsed: Int                    = 1
+    @State private var cachedDaysInMonth: Int                    = 30
     @State private var cachedBiggestExpense: Transaction?        = nil
+    @State private var cachedBiggestPct: Double                  = 0
     @State private var cachedStatusColor: Color                  = AppColors.charcoal
-    // Cached once at init — currentYearMonths() does Calendar + DateFormatter
-    // work and never changes mid-session (only changes at month boundary).
+    @State private var cachedMoneyLeft: Double                   = 0
+    @State private var cachedMonthForecast: Double               = 0
+    @State private var cachedWeeklySpends: [WeekSpend]           = []
+    @State private var cachedActualSavings: Double               = 0
+    @State private var cachedTargetSavings: Double               = 0
+    @State private var cachedInsights: [BudgetInsight]           = []
     @State private var monthsToShow: [String]                    = MonthHelper.currentYearMonths()
+    @State private var topScrollOffset: CGFloat                  = 0
 
     private var budget: MonthlyBudget? {
         allBudgets.first { $0.month == selectedMonth }
     }
 
-    // ── Snap card — identical logic to home page ──────────────────────────────
-    private func snapCard(translationY: CGFloat, predictedY: CGFloat, screenH: CGFloat) {
-        let peekY    = screenH * kBudgetPeekFraction
-        let expandY  = screenH * kBudgetExpandFraction
-        let currentY = screenH * cardFraction + translationY
-        let midY     = (peekY + expandY) / 2
-        let goExpand = currentY < midY || (predictedY - translationY) < -200
-
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
-            cardFraction = goExpand ? kBudgetExpandFraction : kBudgetPeekFraction
-            dragOffset   = 0
-        } completion: {
-            isScrollEnabled = goExpand
-        }
-    }
-
     var body: some View {
-        Group {
-            if budget == nil {
-                noBudgetLayout
-            } else {
-                budgetLayout
+        ZStack {
+            AppColors.wizardBg.ignoresSafeArea()
+
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    // ── Title ──────────────────────────────────────────────
+                    ZStack {
+                        Text("Budget")
+                            .font(.custom("PlusJakartaSans-Bold", size: 22))
+                            .foregroundStyle(AppColors.charcoal)
+                            .frame(maxWidth: .infinity, alignment: .center)
+
+                        if budget != nil {
+                            HStack {
+                                Spacer()
+                                Menu {
+                                    Button("Edit Budget", systemImage: "pencil") { showingEditSheet = true }
+                                    Button("Delete Budget", systemImage: "trash",
+                                           role: .destructive) { confirmDelete = true }
+                                } label: {
+                                    Image(systemName: "gearshape")
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundStyle(AppColors.charcoal.opacity(0.4))
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 12)
+
+                    // ── Month pills ────────────────────────────────────────
+                    BudgetMonthStrip(months: monthsToShow, selected: $selectedMonth)
+                        .padding(.bottom, 20)
+
+                    // ── Hero amount ────────────────────────────────────────
+                    BudgetHeroView(amount: cachedTotalSpent, statusColor: cachedStatusColor)
+                        .padding(.bottom, 16)
+
+                    // ── Chart ──────────────────────────────────────────────
+                    if budget != nil {
+                        BudgetChartView(
+                            data: cachedChartData,
+                            budgetLimit: budget?.spendBudget ?? 0,
+                            month: selectedMonth,
+                            statusColor: cachedStatusColor
+                        )
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 28)
+                    }
+
+                    // ── Cards ──────────────────────────────────────────────
+                    if let b = budget {
+                        BudgetSections(
+                            budget: b,
+                            totalSpent: cachedTotalSpent,
+                            categorySpends: cachedCategorySpends,
+                            averageDaily: cachedAverageDaily,
+                            daysElapsed: cachedDaysElapsed,
+                            biggestExpense: cachedBiggestExpense,
+                            biggestPct: cachedBiggestPct,
+                            moneyLeft: cachedMoneyLeft,
+                            monthForecast: cachedMonthForecast,
+                            weeklySpends: cachedWeeklySpends,
+                            actualSavings: cachedActualSavings,
+                            targetSavings: cachedTargetSavings,
+                            insights: cachedInsights,
+                            statusColor: cachedStatusColor
+                        )
+                    } else {
+                        BudgetEmptyPrompt(onCreate: { showingCreateSheet = true })
+                            .padding(.horizontal, 16)
+                    }
+
+                    Color.clear.frame(height: 40)
+                }
             }
+            .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, y in
+                topScrollOffset = y
+            }
+            .swipeMonthGesture(months: monthsToShow, selected: $selectedMonth)
+
+            // Top fade — matches the system tab bar blur at the bottom
+            LinearGradient(
+                colors: [AppColors.wizardBg, AppColors.wizardBg.opacity(0)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 44)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .opacity(min(1.0, topScrollOffset / 24.0))
+            .allowsHitTesting(false)
+            .ignoresSafeArea(edges: .top)
         }
-        // Lifecycle — on BudgetView, not per-layout, so recompute() fires
-        // regardless of which layout is currently showing.
         .onAppear { recompute() }
         .onChange(of: selectedMonth) { recompute() }
         .onChange(of: allTransactions) { recompute() }
-        // Sheets — also at this level so they work from both layouts
         .fullScreenCover(isPresented: $showingCreateSheet) {
             CreateBudgetWizard(month: selectedMonth) { income, liabilities, spendBudget in
                 modelContext.insert(MonthlyBudget(month: selectedMonth, income: income,
@@ -104,137 +181,17 @@ struct BudgetView: View {
         } message: { Text("Budget for \(MonthHelper.longLabel(selectedMonth)) will be removed.") }
     }
 
-    // MARK: - No budget layout (fixed, non-collapsable)
-    // Card sits exactly 24pt below the hero amount — no drag, fully open.
+    // MARK: - Recompute
 
-    private var noBudgetLayout: some View {
-        ZStack(alignment: .top) {
-            cachedStatusColor.ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                // Colored header section
-                BudgetTopContent(
-                    monthsToShow: monthsToShow,
-                    selectedMonth: $selectedMonth,
-                    totalSpent: cachedTotalSpent,
-                    chartData: [],
-                    budgetLimit: 0,
-                    showChart: false
-                )
-
-                // 24pt gap between hero bottom and card top
-                Spacer().frame(height: 24)
-
-                // White card — fixed open, fills remaining space
-                VStack(spacing: 0) {
-                    BudgetEmptyPrompt(onCreate: { showingCreateSheet = true })
-                    Color.white.frame(height: 400)
-                }
-                .background(.white)
-                .clipShape(
-                    UnevenRoundedRectangle(
-                        topLeadingRadius: 24, bottomLeadingRadius: 0,
-                        bottomTrailingRadius: 0, topTrailingRadius: 24,
-                        style: .continuous
-                    )
-                )
-                .shadow(color: .black.opacity(0.10), radius: 16, x: 0, y: -4)
-            }
-            .swipeMonthGesture(months: monthsToShow, selected: $selectedMonth)
-        }
-        .ignoresSafeArea(edges: .bottom)
-    }
-
-    // MARK: - Budget exists layout (draggable card)
-
-    private var budgetLayout: some View {
-        GeometryReader { geo in
-            let screenH   = geo.size.height
-            let peekY     = screenH * kBudgetPeekFraction
-            let expandY   = screenH * kBudgetExpandFraction
-            let cardY     = max(expandY, min(peekY, screenH * cardFraction + dragOffset))
-            let progress  = (cardY - expandY) / (peekY - expandY)
-            let topRadius: CGFloat = 22 + (1 - progress) * 22
-
-            ZStack(alignment: .top) {
-                cachedStatusColor.ignoresSafeArea()
-
-                // Colored top content — clipped at cardY
-                BudgetTopContent(
-                    monthsToShow: monthsToShow,
-                    selectedMonth: $selectedMonth,
-                    totalSpent: cachedTotalSpent,
-                    chartData: cachedChartData,
-                    budgetLimit: budget?.spendBudget ?? 0,
-                    showChart: true
-                )
-                .frame(height: cardY, alignment: .top)
-                .clipped()
-                .opacity(progress < 0.01 ? 0 : 1)
-
-                // Draggable detail card
-                VStack(spacing: 0) {
-                    BudgetDetailCard(
-                        budget: budget,
-                        totalSpent: cachedTotalSpent,
-                        categorySpends: cachedCategorySpends,
-                        averageDaily: cachedAverageDaily,
-                        daysElapsed: cachedDaysElapsed,
-                        biggestExpense: cachedBiggestExpense,
-                        isExpanded: isScrollEnabled,
-                        scrollOffset: $listScrollOffset,
-                        onCreateBudget: { showingCreateSheet = true },
-                        onEdit: { showingEditSheet = true },
-                        onDelete: { confirmDelete = true }
-                    )
-                    Color.white.frame(height: 400)
-                }
-                .offset(y: cardY)
-                .clipShape(
-                    UnevenRoundedRectangle(
-                        topLeadingRadius: topRadius, bottomLeadingRadius: 0,
-                        bottomTrailingRadius: 0, topTrailingRadius: topRadius,
-                        style: .continuous
-                    )
-                )
-                .shadow(color: .black.opacity(0.10), radius: 16, x: 0, y: -4)
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 10)
-                        .onChanged { v in
-                            isScrollEnabled = false
-                            let dy = v.translation.height
-                            if dy > 0 || listScrollOffset >= -1 { dragOffset = dy }
-                        }
-                        .onEnded { v in
-                            let dy = v.translation.height
-                            if dy > 0 || listScrollOffset >= -1 {
-                                snapCard(translationY: v.translation.height,
-                                         predictedY: v.predictedEndTranslation.height,
-                                         screenH: screenH)
-                            } else {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
-                                    dragOffset = 0
-                                }
-                            }
-                        }
-                )
-            }
-            .swipeMonthGesture(months: monthsToShow, selected: $selectedMonth)
-        }
-        .ignoresSafeArea(edges: .bottom)
-    }
-
-    // ── Recompute all derived state — called only when inputs change ──────────
     private func recompute() {
         let cal = Calendar.current
         guard let monthDate = MonthHelper.dateFrom(key: selectedMonth) else { return }
-        let year     = cal.component(.year, from: monthDate)
-        let monthNum = cal.component(.month, from: monthDate)
+        let year        = cal.component(.year, from: monthDate)
+        let monthNum    = cal.component(.month, from: monthDate)
         let isCurrentMonth = selectedMonth == MonthHelper.current
         let daysInMonth = cal.range(of: .day, in: .month, for: monthDate)?.count ?? 30
-        let todayDay = isCurrentMonth ? cal.component(.day, from: .now) : daysInMonth
+        let todayDay    = isCurrentMonth ? cal.component(.day, from: .now) : daysInMonth
 
-        // Filter month transactions
         let monthTx = allTransactions.filter { t in
             t.type == "debit" && !t.excludedFromCalc &&
             cal.component(.year, from: t.date) == year &&
@@ -251,11 +208,11 @@ struct BudgetView: View {
         }
         let totalSpent = chartData.last?.cumulative ?? 0
 
-        // Category breakdown (top 5 by amount)
+        // Category breakdown (top 4)
         var catTotals = [String: Double]()
         for t in monthTx { catTotals[t.category, default: 0] += t.amount }
-        let sorted = catTotals.sorted { $0.value > $1.value }.prefix(4)
-        let categorySpends: [CategorySpendItem] = sorted.map { name, amount in
+        let sortedCats = catTotals.sorted { $0.value > $1.value }.prefix(4)
+        let categorySpends: [CategorySpendItem] = sortedCats.map { name, amount in
             let cat = AppCategory.defaults.first { $0.name == name }
             return CategorySpendItem(
                 id: name, name: name, amount: amount,
@@ -265,23 +222,93 @@ struct BudgetView: View {
             )
         }
 
-        // Biggest single transaction
+        // Biggest expense
         let biggest = monthTx.max(by: { $0.amount < $1.amount })
+        let biggestPct = (totalSpent > 0 && biggest != nil) ? (biggest!.amount / totalSpent) : 0
 
-        // Average daily
+        // Weekly spends — Week 1: 1-7, Week 2: 8-14, Week 3: 15-21, Week 4: 22-end
+        let weekRanges: [(Int, Int)] = [(1,7),(8,14),(15,21),(22,daysInMonth)]
+        let weeklySpends: [WeekSpend] = weekRanges.enumerated().map { i, range in
+            let total = (range.0...range.1).reduce(0.0) { $0 + (dailyTotals[$1] ?? 0) }
+            return WeekSpend(id: i + 1, label: "Wk \(i + 1)", amount: total)
+        }
+
         let elapsed = max(1, todayDay)
+        let averageDaily = totalSpent / Double(elapsed)
 
-        // Assign directly — recompute() is only called when data actually changes.
-        // The old equality checks (e.g. map(\.cumulative)) were O(n) and more
-        // expensive than the assignments they were guarding.
+        // Burn rate stats
+        let moneyLeft = (allBudgets.first { $0.month == selectedMonth }?.spendBudget ?? 0) - totalSpent
+        let monthForecast = averageDaily * Double(daysInMonth)
+
+        // Savings
+        let actualSavings: Double
+        let targetSavings: Double
+        if let b = allBudgets.first(where: { $0.month == selectedMonth }) {
+            actualSavings = b.income - b.fixedLiabilities - totalSpent
+            targetSavings = b.income - b.fixedLiabilities - b.spendBudget
+        } else {
+            actualSavings = 0; targetSavings = 0
+        }
+
+        // Insights
+        var insights: [BudgetInsight] = []
+        if let topCat = categorySpends.first {
+            let pct = Int((topCat.fraction * 100).rounded())
+            insights.append(BudgetInsight(
+                icon: "exclamationmark.triangle.fill",
+                title: "Cut back on \(topCat.name)",
+                body: "It accounts for \(pct)% of your spend this month."
+            ))
+        }
+        if let b = allBudgets.first(where: { $0.month == selectedMonth }), b.spendBudget > 0 {
+            let overshoot = monthForecast - b.spendBudget
+            if overshoot > 0 {
+                insights.append(BudgetInsight(
+                    icon: "flame.fill",
+                    title: "You're burning too fast",
+                    body: "At \(compactINR(averageDaily))/day, you'll overshoot by \(compactINR(overshoot)) by month end."
+                ))
+            } else {
+                insights.append(BudgetInsight(
+                    icon: "checkmark.seal.fill",
+                    title: "You're on track",
+                    body: "At \(compactINR(averageDaily))/day, you'll stay \(compactINR(abs(overshoot))) under budget."
+                ))
+            }
+        }
+        if targetSavings > 0 {
+            let diff = actualSavings - targetSavings
+            if diff >= 0 {
+                insights.append(BudgetInsight(
+                    icon: "banknote.fill",
+                    title: "Savings on target",
+                    body: "You've preserved \(compactINR(actualSavings)) this month. Target was \(compactINR(targetSavings))."
+                ))
+            } else {
+                insights.append(BudgetInsight(
+                    icon: "banknote.fill",
+                    title: "Savings lagging",
+                    body: "You've preserved \(compactINR(max(0, actualSavings))) so far. Target was \(compactINR(targetSavings))."
+                ))
+            }
+        }
+
+        // Assign
         cachedChartData       = chartData
         cachedTotalSpent      = totalSpent
         cachedDaysElapsed     = elapsed
-        cachedAverageDaily    = totalSpent / Double(elapsed)
+        cachedDaysInMonth     = daysInMonth
+        cachedAverageDaily    = averageDaily
         cachedCategorySpends  = categorySpends
         cachedBiggestExpense  = biggest
+        cachedBiggestPct      = biggestPct
+        cachedMoneyLeft       = moneyLeft
+        cachedMonthForecast   = monthForecast
+        cachedWeeklySpends    = weeklySpends
+        cachedActualSavings   = actualSavings
+        cachedTargetSavings   = targetSavings
+        cachedInsights        = insights
 
-        // Status color cached here so body never computes it during drag
         if let b = allBudgets.first(where: { $0.month == selectedMonth }) {
             cachedStatusColor = totalSpent > b.spendBudget
                 ? Color(red: 0.72, green: 0.11, blue: 0.11)
@@ -292,48 +319,7 @@ struct BudgetView: View {
     }
 }
 
-// MARK: - Shared top content (title + pills + hero + optional chart)
-
-private struct BudgetTopContent: View {
-    let monthsToShow: [String]
-    @Binding var selectedMonth: String
-    let totalSpent: Double
-    let chartData: [DailySpendPoint]
-    let budgetLimit: Double
-    let showChart: Bool
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("BUDGETING")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .tracking(1.0)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 12)
-                .padding(.bottom, 14)
-
-            BudgetMonthStrip(months: monthsToShow, selected: $selectedMonth)
-                .padding(.bottom, 16)
-
-            BudgetHeroView(
-                headline: MonthHelper.longLabel(selectedMonth),
-                amount: totalSpent
-            )
-            .fixedSize(horizontal: false, vertical: true)
-
-            if showChart {
-                BudgetChartView(
-                    data: chartData,
-                    budgetLimit: budgetLimit,
-                    month: selectedMonth
-                )
-                Spacer(minLength: 0) // only expands in budgetLayout where .frame(height:) constrains it
-            }
-        }
-    }
-}
-
-// MARK: - Swipe month gesture (extracted to avoid duplication)
+// MARK: - Swipe month gesture
 
 private extension View {
     func swipeMonthGesture(months: [String], selected: Binding<String>) -> some View {
@@ -359,17 +345,21 @@ private struct BudgetMonthStrip: View {
     @Binding var selected: String
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                ForEach(months, id: \.self) { month in
-                    BudgetMonthPill(month: month, isSelected: selected == month) {
-                        selected = month
+        GeometryReader { geo in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(months, id: \.self) { month in
+                        BudgetMonthPill(month: month, isSelected: selected == month) {
+                            selected = month
+                        }
                     }
                 }
+                .padding(.horizontal, 20)
+                .frame(minWidth: geo.size.width, alignment: .center)
             }
-            .padding(.horizontal, 20)
+            .scrollIndicators(.hidden)
         }
-        .scrollIndicators(.hidden)
+        .frame(height: 38)
     }
 }
 
@@ -381,28 +371,27 @@ private struct BudgetMonthPill: View {
     var body: some View {
         Button(action: onTap) {
             Text(MonthHelper.shortLabel(month))
-                .font(.system(size: 14, weight: isSelected ? .bold : .medium, design: .rounded))
-                .foregroundStyle(isSelected ? AppColors.charcoal : .white.opacity(0.7))
+                .font(.custom(isSelected ? "PlusJakartaSans-Bold" : "PlusJakartaSans-Medium", size: 14))
+                .foregroundStyle(AppColors.charcoal)
                 .padding(.horizontal, 16).padding(.vertical, 8)
                 .background(
-                    isSelected
-                        ? RoundedRectangle(cornerRadius: 10, style: .continuous).fill(.white)
-                        : nil
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(isSelected ? Color.white : Color(red: 0.976, green: 0.976, blue: 0.976))
+                        .shadow(color: isSelected ? .black.opacity(0.08) : .clear, radius: 4, x: 0, y: 2)
                 )
         }
         .buttonStyle(.plain)
     }
 }
 
-// MARK: - Hero amount view (all white — on colored bg)
+// MARK: - Hero amount
 
 private struct BudgetHeroView: View {
-    let headline: String
     let amount: Double
+    let statusColor: Color
 
     private func fmt(_ v: Double) -> String {
-        let x: Double
-        let suffix: String
+        let x: Double; let suffix: String
         if v >= 10_000_000    { x = v / 10_000_000; suffix = "Cr" }
         else if v >= 100_000  { x = v / 100_000;    suffix = "L"  }
         else if v >= 1_000    { x = v / 1_000;      suffix = "K"  }
@@ -415,74 +404,64 @@ private struct BudgetHeroView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 4) {
-                Text(headline)
-                    .font(.caption.weight(.medium))
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 8, weight: .bold))
-            }
-            .foregroundStyle(.white.opacity(0.75))
-
-            Text(fmt(amount))
-                .font(.custom("Sora-SemiBold", size: 90))
-                .tracking(-3.6)
-                .monospacedDigit()
-                .foregroundStyle(.white)
-                .lineLimit(1)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 8)
+        Text(fmt(amount))
+            .font(.custom("Sora-SemiBold", size: 90))
+            .tracking(-3.6)
+            .monospacedDigit()
+            .foregroundStyle(statusColor)
+            .lineLimit(1)
+            .minimumScaleFactor(0.4)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.horizontal, 20)
     }
 }
 
-// MARK: - Line chart (white on colored bg)
+// MARK: - Line chart
 
 private struct BudgetChartView: View {
     let data: [DailySpendPoint]
     let budgetLimit: Double
     let month: String
+    let statusColor: Color
 
-    private var todayDay: Int {
-        month == MonthHelper.current
-            ? Calendar.current.component(.day, from: .now)
-            : (data.last?.day ?? 0)
-    }
     private var todayPoint: DailySpendPoint? { data.last }
     private var daysInMonth: Int {
         guard let d = MonthHelper.dateFrom(key: month) else { return 31 }
         return Calendar.current.range(of: .day, in: .month, for: d)?.count ?? 31
     }
     private var yMax: Double {
-        max(budgetLimit * 1.25, (data.last?.cumulative ?? 1) * 1.2, 1)
+        let peak = max(budgetLimit, data.last?.cumulative ?? 0)
+        return max(peak * 1.35, 500)
     }
 
     var body: some View {
         Chart {
             ForEach(data) { pt in
+                AreaMark(x: .value("Day", pt.day), y: .value("Amt", pt.cumulative))
+                    .foregroundStyle(AppColors.charcoal.opacity(0.06))
+                    .interpolationMethod(.linear)
                 LineMark(x: .value("Day", pt.day), y: .value("Amt", pt.cumulative))
-                    .foregroundStyle(.white)
-                    .lineStyle(StrokeStyle(lineWidth: 2))
-                    .interpolationMethod(.catmullRom)
+                    .foregroundStyle(AppColors.charcoal)
+                    .lineStyle(StrokeStyle(lineWidth: 2.5))
+                    .interpolationMethod(.linear)
             }
             if budgetLimit > 0 {
                 RuleMark(y: .value("Budget", budgetLimit))
-                    .foregroundStyle(.white.opacity(0.35))
-                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 4]))
-                    .annotation(position: .topLeading, spacing: 2) {
+                    .foregroundStyle(statusColor.opacity(0.6))
+                    .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+                    .annotation(position: .topTrailing, spacing: 2) {
                         Text(BudgetFormatter.format(budgetLimit))
-                            .font(.system(size: 9, weight: .semibold, design: .rounded))
-                            .foregroundStyle(AppColors.charcoal.opacity(0.7))
+                            .font(.custom("PlusJakartaSans-SemiBold", size: 9))
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 6).padding(.vertical, 3)
-                            .background(Color.white)
+                            .background(statusColor.opacity(0.85))
                             .clipShape(.rect(cornerRadius: 4))
                     }
             }
             if let today = todayPoint {
                 PointMark(x: .value("Day", today.day), y: .value("Amt", today.cumulative))
-                    .symbolSize(50).foregroundStyle(.white)
+                    .symbolSize(60)
+                    .foregroundStyle(AppColors.charcoal)
             }
         }
         .chartXAxis {
@@ -490,8 +469,8 @@ private struct BudgetChartView: View {
                 AxisValueLabel {
                     if let d = v.as(Int.self) {
                         Text(String(format: "%02d", d))
-                            .font(.system(size: 9, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.5))
+                            .font(.custom("PlusJakartaSans-Regular", size: 9))
+                            .foregroundStyle(AppColors.charcoal.opacity(0.4))
                     }
                 }
                 AxisGridLine().foregroundStyle(Color.clear)
@@ -501,335 +480,437 @@ private struct BudgetChartView: View {
         .chartYAxis(.hidden)
         .chartXScale(domain: 1...daysInMonth)
         .chartYScale(domain: 0...yMax)
-        .padding(.horizontal, 8)
-        .padding(.bottom, 8)
+        .frame(height: 160)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
 }
 
-// MARK: - Detail card (Flighty-style scrollable sections)
+// MARK: - Section cards container
 
-private struct BudgetDetailCard: View {
-    let budget: MonthlyBudget?
-    let totalSpent: Double
-    let categorySpends: [CategorySpendItem]
-    let averageDaily: Double
-    let daysElapsed: Int
-    let biggestExpense: Transaction?
-    let isExpanded: Bool
-    @Binding var scrollOffset: CGFloat
-    let onCreateBudget: () -> Void
-    let onEdit: () -> Void
-    let onDelete: () -> Void
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // ── Drag handle — identical to home page ───────────────────────
-            Capsule()
-                .fill(AppColors.charcoal.opacity(0.18))
-                .frame(width: 36, height: 4)
-                .padding(.top, 10).padding(.bottom, 14)
-
-            // ── Header row with settings gear ─────────────────────────────
-            HStack {
-                Text("Budget for month")
-                    .font(.system(.title3, design: .rounded, weight: .bold))
-                    .foregroundStyle(AppColors.charcoal)
-                Spacer()
-                if budget != nil {
-                    Menu {
-                        Button("Edit Budget", systemImage: "pencil", action: onEdit)
-                        Button("Delete Budget", systemImage: "trash",
-                               role: .destructive, action: onDelete)
-                    } label: {
-                        Image(systemName: "gearshape")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(AppColors.charcoal.opacity(0.45))
-                    }
-                }
-            }
-            .padding(.horizontal, 20).padding(.bottom, 12)
-
-            // ── Scrollable content ─────────────────────────────────────────
-            if let b = budget {
-                BudgetScrollContent(
-                    budget: b,
-                    totalSpent: totalSpent,
-                    categorySpends: categorySpends,
-                    averageDaily: averageDaily,
-                    daysElapsed: daysElapsed,
-                    biggestExpense: biggestExpense,
-                    isExpanded: isExpanded,
-                    scrollOffset: $scrollOffset
-                )
-            } else {
-                BudgetEmptyPrompt(onCreate: onCreateBudget)
-            }
-        }
-        .background(.white)
-    }
-}
-
-// MARK: - Scroll content (3 Flighty-style sections)
-
-private struct BudgetScrollContent: View {
+private struct BudgetSections: View {
     let budget: MonthlyBudget
     let totalSpent: Double
     let categorySpends: [CategorySpendItem]
     let averageDaily: Double
     let daysElapsed: Int
     let biggestExpense: Transaction?
-    let isExpanded: Bool
-    @Binding var scrollOffset: CGFloat
+    let biggestPct: Double
+    let moneyLeft: Double
+    let monthForecast: Double
+    let weeklySpends: [WeekSpend]
+    let actualSavings: Double
+    let targetSavings: Double
+    let insights: [BudgetInsight]
+    let statusColor: Color
+
+    private let errorColor  = Color(red: 0.72, green: 0.11, blue: 0.11)
+    private let successColor = Color(red: 0.10, green: 0.58, blue: 0.32)
 
     var body: some View {
-        ScrollView(.vertical) {
-            LazyVStack(spacing: 0) {
-                // ── Section 1: Category Spend ──────────────────────────────
-                CategorySpendSection(
+        VStack(alignment: .leading, spacing: 24) {
+            BudgetSectionCard(heading: "How fast are you spending right now?") {
+                BurnRateCard(
+                    averageDaily: averageDaily,
+                    moneyLeft: moneyLeft,
+                    monthForecast: monthForecast,
+                    spendBudget: budget.spendBudget,
+                    errorColor: errorColor,
+                    successColor: successColor
+                )
+            }
+
+            BudgetSectionCard(heading: "Where is the money actually going?") {
+                CategoryBreakdownCard(
                     categorySpends: categorySpends,
-                    totalSpent: totalSpent,
                     spendBudget: budget.spendBudget
                 )
+            }
 
-                sectionDivider
-
-                // ── Section 2: Average daily ───────────────────────────────
-                AverageDailySection(
-                    averageDaily: averageDaily,
-                    daysElapsed: daysElapsed,
-                    totalSpent: totalSpent
+            BudgetSectionCard(heading: "What was your biggest purchase this month?") {
+                SpotlightCard(
+                    transaction: biggestExpense,
+                    biggestPct: biggestPct
                 )
+            }
 
-                sectionDivider
+            BudgetSectionCard(heading: "Which week did you spend the most?") {
+                WeekByWeekCard(
+                    weeklySpends: weeklySpends,
+                    errorColor: errorColor,
+                    successColor: successColor
+                )
+            }
 
-                // ── Section 3: Biggest expense ─────────────────────────────
-                BiggestExpenseSection(transaction: biggestExpense)
+            BudgetSectionCard(heading: "How close are you to what you're building towards?") {
+                SavingsMomentumCard(
+                    actualSavings: actualSavings,
+                    targetSavings: targetSavings,
+                    errorColor: errorColor,
+                    successColor: successColor
+                )
+            }
 
-                Color.clear.frame(height: 40)
+            if !insights.isEmpty {
+                BudgetSectionCard(heading: "What should next month look different?") {
+                    LookingAheadCard(insights: insights)
+                }
             }
         }
-        .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, v in
-            scrollOffset = -v
+        .padding(.horizontal, 16)
+    }
+}
+
+// MARK: - Section card wrapper
+
+private struct BudgetSectionCard<Content: View>: View {
+    let heading: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(heading)
+                .font(.custom("PlusJakartaSans-Bold", size: 18))
+                .foregroundStyle(AppColors.charcoal)
+                .padding(.leading, 4)
+
+            VStack(spacing: 0) {
+                content
+            }
+            .background(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+            .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 3)
         }
-        .scrollIndicators(.hidden)
+    }
+}
+
+// MARK: - Card 2: Burn Rate
+
+private struct BurnRateCard: View {
+    let averageDaily: Double
+    let moneyLeft: Double
+    let monthForecast: Double
+    let spendBudget: Double
+    let errorColor: Color
+    let successColor: Color
+
+    private var isOverBudget: Bool { moneyLeft < 0 }
+    private var forecastOver: Bool { monthForecast > spendBudget }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            burnRow(
+                label: "Daily burn",
+                value: compactINR(averageDaily) + "/day",
+                valueColor: AppColors.charcoal
+            )
+            cardDivider
+            burnRow(
+                label: "Money left",
+                value: isOverBudget ? "-\(compactINR(abs(moneyLeft)))" : compactINR(moneyLeft),
+                valueColor: isOverBudget ? errorColor : successColor
+            )
+            cardDivider
+            burnRow(
+                label: "Month-end forecast",
+                value: forecastOver
+                    ? "Over by \(compactINR(monthForecast - spendBudget))"
+                    : "On track",
+                valueColor: forecastOver ? errorColor : successColor
+            )
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 4)
     }
 
-    private var sectionDivider: some View {
+    @ViewBuilder
+    private func burnRow(label: String, value: String, valueColor: Color) -> some View {
+        HStack {
+            Text(label)
+                .font(.custom("PlusJakartaSans-Regular", size: 14))
+                .foregroundStyle(AppColors.charcoal.opacity(0.5))
+            Spacer()
+            Text(value)
+                .font(.custom("PlusJakartaSans-Bold", size: 15))
+                .foregroundStyle(valueColor)
+        }
+        .padding(.vertical, 18)
+    }
+
+    private var cardDivider: some View {
         Rectangle()
             .fill(AppColors.charcoal.opacity(0.07))
             .frame(height: 0.5)
     }
 }
 
-// MARK: - Section 1: Category Spend
+// MARK: - Card 3: Category Breakdown
 
-private struct CategorySpendSection: View {
+private struct CategoryBreakdownCard: View {
     let categorySpends: [CategorySpendItem]
-    let totalSpent: Double
     let spendBudget: Double
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Section header
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Category Spend")
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundStyle(AppColors.charcoal)
-                    Text(BudgetFormatter.format(totalSpent) + " spent")
-                        .font(.system(.caption2, design: .rounded))
-                        .foregroundStyle(AppColors.charcoal.opacity(0.4))
-                }
-                Spacer()
-                if spendBudget > 0 {
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("Budget")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundStyle(AppColors.charcoal.opacity(0.4))
-                        Text(BudgetFormatter.format(spendBudget))
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundStyle(AppColors.charcoal)
+        if categorySpends.isEmpty {
+            Text("No transactions yet this month")
+                .font(.custom("PlusJakartaSans-Regular", size: 14))
+                .foregroundStyle(AppColors.charcoal.opacity(0.35))
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(16)
+        } else {
+            VStack(spacing: 0) {
+                ForEach(Array(categorySpends.enumerated()), id: \.element.id) { i, item in
+                    CategoryBreakdownRow(item: item, spendBudget: spendBudget)
+                    if i < categorySpends.count - 1 {
+                        Rectangle()
+                            .fill(AppColors.charcoal.opacity(0.07))
+                            .frame(height: 0.5)
+                            .padding(.leading, 56)
                     }
                 }
             }
-            .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 14)
-
-            // Category bars
-            if categorySpends.isEmpty {
-                Text("No transactions yet this month")
-                    .font(.system(size: 14, design: .rounded))
-                    .foregroundStyle(AppColors.charcoal.opacity(0.35))
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 16)
-            } else {
-                ForEach(categorySpends) { item in
-                    CategoryBarRow(item: item)
-                }
-            }
-
-            Spacer(minLength: 0).frame(height: 14)
         }
     }
 }
 
-private struct CategoryBarRow: View {
+private struct CategoryBreakdownRow: View {
     let item: CategorySpendItem
+    let spendBudget: Double
+
+    private var barFraction: Double {
+        spendBudget > 0 ? min(1.0, item.amount / spendBudget) : item.fraction
+    }
 
     var body: some View {
-        // True Flighty style: single pill, emoji circle inside on left,
-        // fill bar behind everything, text right-aligned
-        ZStack(alignment: .leading) {
-            // 1. Track background
-            Capsule()
-                .fill(AppColors.charcoal.opacity(0.07))
+        HStack(alignment: .center, spacing: 14) {
+            // Square pastel avatar
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(item.color.opacity(0.35))
+                    .frame(width: 42, height: 42)
+                Text(item.emoji).font(.system(size: 18))
+            }
 
-            // 2. Color fill — scaleEffect avoids GeometryReader entirely
-            Capsule()
-                .fill(item.color.opacity(0.20))
-                .scaleEffect(x: max(0.015, item.fraction), y: 1, anchor: .leading)
-
-            // 3. Content row (emoji left, text right)
-            HStack(spacing: 0) {
-                // Emoji circle inside pill on left
-                ZStack {
-                    Circle()
-                        .fill(item.color)
-                        .frame(width: 38, height: 38)
-                    Text(item.emoji).font(.system(size: 17))
-                }
-                .padding(.leading, 4)
-
-                Spacer(minLength: 8)
-
-                // Amount + name right-aligned
-                HStack(spacing: 5) {
-                    Text(BudgetFormatter.format(item.amount))
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundStyle(AppColors.charcoal)
+            VStack(alignment: .leading, spacing: 7) {
+                HStack {
                     Text(item.name)
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundStyle(AppColors.charcoal.opacity(0.5))
-                        .lineLimit(1)
+                        .font(.custom("PlusJakartaSans-Medium", size: 14))
+                        .foregroundStyle(AppColors.charcoal)
+                    Spacer()
+                    Text(BudgetFormatter.format(item.amount))
+                        .font(.custom("PlusJakartaSans-Bold", size: 14))
+                        .foregroundStyle(AppColors.charcoal)
                 }
-                .padding(.trailing, 14)
+                // Progress bar
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(AppColors.charcoal.opacity(0.08))
+                            .frame(height: 4)
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(item.color.opacity(0.6))
+                            .frame(width: geo.size.width * barFraction, height: 4)
+                    }
+                }
+                .frame(height: 4)
             }
         }
-        .frame(height: 50)
         .padding(.horizontal, 20)
-        .padding(.vertical, 4)
+        .padding(.vertical, 16)
     }
 }
 
-// MARK: - Section 2: Average Daily
+// MARK: - Card 4: Spotlight
 
-private struct AverageDailySection: View {
-    let averageDaily: Double
-    let daysElapsed: Int
-    let totalSpent: Double
+private struct SpotlightCard: View {
+    let transaction: Transaction?
+    let biggestPct: Double
 
     private static let df: DateFormatter = {
         let f = DateFormatter(); f.dateFormat = "d MMM"; return f
     }()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Average daily expense")
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .foregroundStyle(AppColors.charcoal)
-                .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 12)
-
-            HStack(spacing: 14) {
+        if let t = transaction {
+            HStack(alignment: .center, spacing: 14) {
+                // Square pastel trophy avatar
                 ZStack {
-                    Circle().fill(AppColors.homeBlue.opacity(0.18)).frame(width: 44, height: 44)
-                    Image(systemName: "calendar")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(AppColors.charcoal.opacity(0.6))
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color(red: 1.0, green: 0.82, blue: 0.40).opacity(0.45))
+                        .frame(width: 42, height: 42)
+                    Text("🏆").font(.system(size: 20))
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(BudgetFormatter.format(averageDaily) + " / day")
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(t.merchant)
+                        .font(.custom("PlusJakartaSans-Bold", size: 16))
                         .foregroundStyle(AppColors.charcoal)
-                    Text("Based on \(daysElapsed) days elapsed")
-                        .font(.system(.caption2, design: .rounded))
-                        .foregroundStyle(AppColors.charcoal.opacity(0.4))
+                    Text("\(t.category) · \(Self.df.string(from: t.date))")
+                        .font(.custom("PlusJakartaSans-Regular", size: 12))
+                        .foregroundStyle(AppColors.charcoal.opacity(0.45))
+                    if biggestPct > 0 {
+                        Text(String(format: "%.1f%% of total spend", biggestPct * 100))
+                            .font(.custom("PlusJakartaSans-Regular", size: 11))
+                            .foregroundStyle(AppColors.charcoal.opacity(0.35))
+                    }
                 }
 
                 Spacer()
 
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(BudgetFormatter.format(totalSpent))
-                        .font(.custom("Sora-SemiBold", size: 22))
-                        .foregroundStyle(AppColors.charcoal)
-                    Text("total")
-                        .font(.system(size: 9, weight: .semibold, design: .rounded))
-                        .foregroundStyle(AppColors.charcoal.opacity(0.35))
-                        .padding(.horizontal, 6).padding(.vertical, 3)
-                        .background(Capsule().fill(AppColors.charcoal.opacity(0.07)))
-                }
+                Text(compactINR(t.amount))
+                    .font(.custom("PlusJakartaSans-Bold", size: 18))
+                    .foregroundStyle(AppColors.charcoal)
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 20)
+            .padding(20)
+        } else {
+            Text("No transactions yet")
+                .font(.custom("PlusJakartaSans-Regular", size: 14))
+                .foregroundStyle(AppColors.charcoal.opacity(0.35))
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(16)
         }
     }
 }
 
-// MARK: - Section 3: Biggest Expense
+// MARK: - Card 5: Week by Week
 
-private struct BiggestExpenseSection: View {
-    let transaction: Transaction?
+private struct WeekByWeekCard: View {
+    let weeklySpends: [WeekSpend]
+    let errorColor: Color
+    let successColor: Color
 
-    private static let df: DateFormatter = {
-        let f = DateFormatter(); f.dateFormat = "d MMM yyyy"; return f
-    }()
+    private var maxWeek: WeekSpend? { weeklySpends.max(by: { $0.amount < $1.amount }) }
+    private var minWeek: WeekSpend? {
+        weeklySpends.filter { $0.amount > 0 }.min(by: { $0.amount < $1.amount })
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Biggest expense")
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .foregroundStyle(AppColors.charcoal)
-                .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 12)
-
-            if let t = transaction {
-                HStack(alignment: .center, spacing: 14) {
-                    // Category icon — same as TransactionRowView
-                    ZStack {
-                        Circle().fill(categoryColor(t.category).opacity(0.15)).frame(width: 44, height: 44)
-                        Text(categoryEmoji(t.category)).font(.system(size: 18))
-                    }
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(t.merchant)
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
-                            .foregroundStyle(AppColors.charcoal)
-                        Text("\(t.category) · \(Self.df.string(from: t.date))")
-                            .font(.system(.caption2, design: .rounded))
-                            .foregroundStyle(AppColors.charcoal.opacity(0.4))
-                    }
-
-                    Spacer()
-
-                    Text(compactINR(t.amount))
-                        .font(.custom("Sora-SemiBold", size: 22))
-                        .foregroundStyle(AppColors.charcoal)
+        Chart(weeklySpends) { week in
+            BarMark(
+                x: .value("Week", week.label),
+                y: .value("Amount", week.amount)
+            )
+            .foregroundStyle(barColor(for: week))
+            .cornerRadius(4)
+            .annotation(position: .top, spacing: 4) {
+                if week.amount > 0 {
+                    Text(compactINR(week.amount))
+                        .font(.custom("PlusJakartaSans-SemiBold", size: 10))
+                        .foregroundStyle(AppColors.charcoal.opacity(0.6))
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 20)
-            } else {
-                Text("No transactions yet")
-                    .font(.system(size: 14, design: .rounded))
-                    .foregroundStyle(AppColors.charcoal.opacity(0.35))
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 16)
             }
         }
+        .chartXAxis {
+            AxisMarks { v in
+                AxisValueLabel {
+                    if let l = v.as(String.self) {
+                        Text(l)
+                            .font(.custom("PlusJakartaSans-Regular", size: 11))
+                            .foregroundStyle(AppColors.charcoal.opacity(0.5))
+                    }
+                }
+                AxisGridLine().foregroundStyle(Color.clear)
+                AxisTick().foregroundStyle(Color.clear)
+            }
+        }
+        .chartYAxis(.hidden)
+        .frame(height: 150)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
     }
 
-    private func categoryEmoji(_ name: String) -> String {
-        AppCategory.defaults.first { $0.name == name }?.emoji ?? "💳"
+    private func barColor(for week: WeekSpend) -> Color {
+        if week.id == maxWeek?.id { return errorColor }
+        if week.id == minWeek?.id { return successColor }
+        return AppColors.charcoal.opacity(0.2)
     }
-    private func categoryColor(_ name: String) -> Color {
-        AppCategory.defaults.first { $0.name == name }?.color ?? AppColors.charcoal.opacity(0.5)
+}
+
+// MARK: - Card 6: Savings Momentum
+
+private struct SavingsMomentumCard: View {
+    let actualSavings: Double
+    let targetSavings: Double
+    let errorColor: Color
+    let successColor: Color
+
+    private var isOnTarget: Bool { actualSavings >= targetSavings }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            savingsRow(label: "Target savings", value: compactINR(max(0, targetSavings)), color: AppColors.charcoal, showBadge: false)
+            Rectangle().fill(AppColors.charcoal.opacity(0.07)).frame(height: 0.5)
+            savingsRow(
+                label: "Actual saved",
+                value: compactINR(max(0, actualSavings)),
+                color: isOnTarget ? successColor : errorColor,
+                showBadge: true
+            )
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private func savingsRow(label: String, value: String, color: Color, showBadge: Bool) -> some View {
+        HStack {
+            Text(label)
+                .font(.custom("PlusJakartaSans-Regular", size: 14))
+                .foregroundStyle(AppColors.charcoal.opacity(0.5))
+            Spacer()
+            HStack(spacing: 6) {
+                Text(value)
+                    .font(.custom("PlusJakartaSans-SemiBold", size: 15))
+                    .foregroundStyle(color)
+                if showBadge {
+                    Image(systemName: isOnTarget ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(isOnTarget ? successColor : errorColor)
+                }
+            }
+        }
+        .padding(.vertical, 18)
+    }
+}
+
+// MARK: - Card 7: Looking Ahead
+
+private struct LookingAheadCard: View {
+    let insights: [BudgetInsight]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(insights.enumerated()), id: \.offset) { i, insight in
+                HStack(alignment: .top, spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(AppColors.charcoal.opacity(0.07))
+                            .frame(width: 40, height: 40)
+                        Image(systemName: insight.icon)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(AppColors.charcoal.opacity(0.55))
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(insight.title)
+                            .font(.custom("PlusJakartaSans-Bold", size: 14))
+                            .foregroundStyle(AppColors.charcoal)
+                        Text(insight.body)
+                            .font(.custom("PlusJakartaSans-Regular", size: 12))
+                            .foregroundStyle(AppColors.charcoal.opacity(0.5))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+
+                if i < insights.count - 1 {
+                    Rectangle()
+                        .fill(AppColors.charcoal.opacity(0.07))
+                        .frame(height: 0.5)
+                }
+            }
+        }
     }
 }
 
@@ -846,17 +927,17 @@ private struct BudgetEmptyPrompt: View {
                 .padding(.top, 32)
 
             Text("No budget set for this month")
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                .font(.custom("PlusJakartaSans-Bold", size: 17))
                 .foregroundStyle(AppColors.charcoal)
 
             Text("Set your income and spending target\nto start tracking your month.")
-                .font(.system(size: 14, design: .rounded))
+                .font(.custom("PlusJakartaSans-Regular", size: 14))
                 .foregroundStyle(AppColors.charcoal.opacity(0.45))
                 .multilineTextAlignment(.center)
 
             Button(action: onCreate) {
                 Text("CREATE BUDGET")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.custom("PlusJakartaSans-Bold", size: 14))
                     .foregroundStyle(.white).tracking(0.6)
                     .frame(maxWidth: .infinity).padding(.vertical, 16)
                     .background(AppColors.charcoal)
